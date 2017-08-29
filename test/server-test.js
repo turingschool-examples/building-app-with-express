@@ -1,6 +1,9 @@
 var assert = require('chai').assert
 var app = require('../server')
 var request = require('request')
+const environment = process.env.NODE_ENV || 'test';
+const configuration = require('../knexfile')[environment];
+const database = require('knex')(configuration);
 
 describe('Server', function(){
   before(function(done){
@@ -41,27 +44,38 @@ describe('Server', function(){
   })
 
   describe('GET /api/secrets/:id', function(){
-    beforeEach(function(){
-      app.locals.secrets = {
-        wowowow: 'I am a banana'
-      }
+    beforeEach(function(done) {
+      database.raw(
+        'INSERT INTO secrets (message, created_at) VALUES (?, ?)',
+        ["I open bananas from the wrong side", new Date]
+      ).then(function() { done() })
     })
 
-    it('should return a 404 if the resource is not found', function(done){
-      this.request.get('/api/secrets/bahaha', function(error, response){
+    afterEach(function(done) {
+      database.raw('TRUNCATE secrets RESTART IDENTITY')
+      .then(function() { done() })
+    })
+
+    it('should return 404 if resource is not found', function(done) {
+      this.request.get('/api/secrets/10000', function(error, response) {
         if (error) { done(error) }
         assert.equal(response.statusCode, 404)
         done()
       })
     })
 
-    it('should have the id and message from the resource', function(done){
-      var id = 'wowowow'
-      var message = app.locals.secrets[id]
-      this.request.get('/api/secrets/' + id, function(error, response){
+    xit('should return the id and message from the resource found', function(done) {
+      this.request.get('/api/secrets/1', function(error, response) {
         if (error) { done(error) }
-        assert.include(response.body, id)
-        assert.include(response.body, message)
+
+        const id = 1
+        const message = "I open bananas from the wrong side"
+
+        let parsedSecret = JSON.parse(response.body)
+
+        assert.equal(parsedSecret.id, id)
+        assert.equal(parsedSecret.message, message)
+        assert.ok(parsedSecret.created_at)
         done()
       })
     })

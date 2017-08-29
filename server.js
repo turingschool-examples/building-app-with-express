@@ -16,11 +16,12 @@ app.get('/', function(request, response) {
 
 app.get('/api/secrets/:id', function(request, response){
   var id = request.params.id
-  var message = app.locals.secrets[id]
+  database.raw("SELECT * FROM secrets WHERE id=?", [id])
+  .then(function(data){
+    if (data.rowCount == 0) { return response.sendStatus(404) }
 
-  if (!message) { return response.sendStatus(404) }
-
-  response.json({ id, message })
+    response.json(data.rows[0])
+  })
 })
 
 app.post('/api/secrets', function(request, response){
@@ -31,8 +32,13 @@ app.post('/api/secrets', function(request, response){
     return response.status(422).send({ error: "No message property provided!"})
   }
 
-  app.locals.secrets[id] = message
-  response.status(201).json({ id, message })
+  database.raw(
+    'INSERT INTO secrets (message, created_at) VALUES (?, ?) RETURNING id, message',
+    [message, new Date]
+  )
+  .then(function(data){
+    response.status(201).json({ data.rows[0].id, data.rows[0].message })
+  })
 })
 
 if(!module.parent) {

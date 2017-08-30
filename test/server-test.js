@@ -64,7 +64,7 @@ describe('Server', function(){
       })
     })
 
-    xit('should return the id and message from the resource found', function(done) {
+    it('should return the id and message from the resource found', function(done) {
       this.request.get('/api/secrets/1', function(error, response) {
         if (error) { done(error) }
 
@@ -82,8 +82,9 @@ describe('Server', function(){
   })
 
   describe('POST /api/secrets', function(){
-    beforeEach(function(){
-      app.locals.secrets = {}
+    beforeEach(function(done) {
+      database.raw('TRUNCATE secrets RESTART IDENTITY')
+      .then(function() { done() })
     })
 
     it('should receive and store data', function(done){
@@ -93,9 +94,9 @@ describe('Server', function(){
 
       this.request.post('/api/secrets', { form: message }, function(error, response){
         if (error) { done(error) }
-
-        var secretCount = Object.keys(app.locals.secrets).length
-        assert.equal(secretCount, 1)
+        var parsedSecret = JSON.parse(response.body)
+        assert.equal("I like pineapples!", parsedSecret.message)
+        assert.equal(response.statusCode, 201)
         done()
       })
     })

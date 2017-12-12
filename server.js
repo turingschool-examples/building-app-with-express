@@ -28,7 +28,6 @@ app.get('/api/secrets/:id', function(request, response){
 })
 
 app.post('/api/secrets', function(request, response){
-  var id = Date.now()
   var message = request.body.message
 
   if (!message) {
